@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roman Empire RAG</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px 16px; background: #f6f5f1; color: #222; }
+    h1 { margin: 0 0 4px; }
+    h2 { font-size: 17px; margin: 0 0 8px; }
+    .sub { color: #666; margin: 0 0 20px; }
+    form, .box { background: #fff; border: 1px solid #e3e1da; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    form { display: grid; gap: 12px; }
+    label { display: grid; gap: 4px; font-size: 14px; color: #444; }
+    textarea, input, select { padding: 8px 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+    textarea { min-height: 60px; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+    .row label { flex: 1; min-width: 120px; }
+    .check { display: flex; align-items: center; gap: 6px; flex: 0; white-space: nowrap; padding-bottom: 8px; }
+    button { padding: 10px; font-size: 15px; border: 0; border-radius: 6px; background: #7a2e2e; color: #fff; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .status { margin: 0 0 16px; color: #555; }
+    .error { color: #b00020; }
+    .progress { height: 8px; background: #e3e1da; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .progress div { height: 100%; width: 0; background: #7a2e2e; transition: width 0.5s; }
+    .answer { white-space: pre-wrap; line-height: 1.5; margin-bottom: 16px; }
+    details { border-top: 1px solid #eee; padding: 8px 0; }
+    summary { cursor: pointer; font-size: 14px; }
+    details p { white-space: pre-wrap; font-size: 14px; color: #444; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    td { padding: 4px 6px; border-top: 1px solid #eee; }
+    .hit { color: #2f7d32; white-space: nowrap; }
+    .miss { color: #b00020; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <h1>Roman Empire RAG</h1>
+  <p class="sub">Ask about Gibbon's <i>History of the Decline and Fall of the Roman Empire</i>. Answers come only from the book.</p>
+
+  <div id="preparing" class="box" hidden>
+    <h2>Preparing the book</h2>
+    <div id="stage">Starting...</div>
+    <div class="progress"><div id="bar"></div></div>
+  </div>
+
+  <form id="ask">
+    <label>Question
+      <textarea name="question" placeholder="Who was Bahram, the son of Jezdegerd?" required></textarea>
+    </label>
+    <div class="row">
+      <label>Volume
+        <select name="volume">
+          <option value="">All volumes</option>
+          <option value="1">Volume 1</option>
+          <option value="2">Volume 2</option>
+          <option value="3">Volume 3</option>
+          <option value="4">Volume 4</option>
+          <option value="5">Volume 5</option>
+          <option value="6">Volume 6</option>
+        </select>
+      </label>
+      <label>Passages (k)
+        <input name="k" type="number" min="1" max="20" value="5">
+      </label>
+      <label class="check"><input name="rerank" type="checkbox"> Re-rank</label>
+    </div>
+    <button type="submit" disabled>Ask</button>
+  </form>
+
+  <p id="ask-status" class="status"></p>
+  <div id="answer"></div>
+
+  <form id="eval">
+    <h2>Evaluation</h2>
+    <p class="sub" style="margin:0">Checks 30 test questions: is a right passage in the top k results?</p>
+    <div class="row">
+      <label>k <input name="k" type="number" min="1" max="20" value="5"></label>
+      <label class="check"><input name="rerank" type="checkbox"> Re-rank</label>
+    </div>
+    <button type="submit" disabled>Run evaluation</button>
+  </form>
+
+  <p id="eval-status" class="status"></p>
+  <div id="eval-result"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

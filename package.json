@@ -1,0 +1,18 @@
+{
+  "name": "roman-empire-rag",
+  "version": "1.0.0",
+  "description": "RAG over Gibbon's Decline and Fall of the Roman Empire (CLI + web UI)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node app.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.0",
+    "express": "^5.1.0"
+  }
+}
