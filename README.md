@@ -1,12 +1,12 @@
-# Roman Empire RAG
+# Sherlock Holmes RAG
 
-Ask a question about Edward Gibbon's History of the Decline and Fall of the Roman Empire (6 volumes),
-and the app answers only from passages found in the book, with sources: volume and chunk number.
-If the book does not contain the answer, it says "I don't know".
+Ask a question about the Sherlock Holmes stories by Arthur Conan Doyle (9 books, Project Gutenberg),
+and the app answers only from passages found in the books, with sources: book title and chunk number.
+If the books do not contain the answer, it says "I don't know".
 
-How it works: on the first start the app downloads the book, removes the Project Gutenberg header and footnotes,
+How it works: on the first start the app downloads the 9 books, removes the Project Gutenberg header and license,
 splits the text into chunks of about 160 words and turns each chunk into a vector with a local model (`all-MiniLM-L6-v2`).
-For a question, it finds the most similar chunks (cosine similarity), optionally only in one volume
+For a question, it finds the most similar chunks (cosine similarity), optionally only in one book
 and optionally re-ranked by a cross-encoder, then sends them to an OpenAI-compatible AI API (tested with Google Gemini).
 If the API fails, it retries (up to 4 attempts).
 
@@ -25,7 +25,7 @@ npm install
 cp .env.example .env
 ```
 
-The first start downloads the book and the models and builds the search index (a few minutes, only once).
+The first start downloads the books and the models and builds the search index (a few minutes, only once).
 
 ## Environment variables
 Put them in `.env`:
@@ -38,7 +38,7 @@ OPENAI_MODEL=gemini-flash-lite-latest
 
 Only `OPENAI_API_KEY` is required. Free Gemini key: https://aistudio.google.com.
 Optional for experiments: `CHUNK_WORDS`, `OVERLAP_WORDS`, `TOP_K`, `EMBED_MODEL` (see `.env.example`).
-If one of them changes, the index is built again on the next start.
+If `CHUNK_WORDS`, `OVERLAP_WORDS` or `EMBED_MODEL` changes, the index is built again on the next start.
 
 ## Run
 **Web UI:**
@@ -50,66 +50,70 @@ and shows Recall@K and MRR (with or without re-rank).
 
 **CLI:**
 ```bash
-node app.js "Who was Bahram, the son of Jezdegerd?" [--volume 3] [--k 5] [--rerank]
+node app.js "Who is Irene Adler?" [--book 3] [--k 5] [--rerank]
 node app.js
 ```
-The second command starts the interactive mode (`/volume 3`, `/rerank on`, `/k 8`, `/exit`).
+The second command starts the interactive mode (`/books`, `/book 3`, `/rerank on`, `/k 8`, `/exit`).
+
+Books: 1 A Study in Scarlet, 2 The Sign of the Four, 3 The Adventures, 4 The Memoirs,
+5 The Hound of the Baskervilles, 6 The Return, 7 The Valley of Fear, 8 His Last Bow, 9 The Case-Book.
 
 ## Experiments
 Evaluation on 30 test questions, k = 5:
 
 | | Recall@5 | MRR |
 |---|---|---|
-| Without re-rank | 90.0% (27/30) | 0.834 |
-| With re-rank | 93.3% (28/30) | 0.883 |
+| Without re-rank | 83.3% (25/30) | 0.761 |
+| With re-rank | 93.3% (28/30) | 0.861 |
 
-The re-ranker fixed 2 misses (Hegira, Peter the Hermit) and moved several answers to the 1st place,
-but lost one (Diocletian / Salona). The Attila question stays a miss in both: the right passage
-is not even among the 25 candidates, so the embedding model is the bottleneck there, not the re-ranker.
+The re-ranker fixed 3 misses (Toby the dog, the curious incident of the dog, Milverton)
+and moved several answers to the 1st place. Two questions stay misses in both (Watson's marriage,
+the seven-per-cent solution): the right passage is not among the 25 candidates, so the embedding model
+is the bottleneck there, not the re-ranker.
 
 ## Example run
-Without a volume filter the search finds two different men called Bahram (volume 3 and volume 4),
-and the model mixes them:
+Without re-rank the vector search misses the passage about Moriarty's fall
+(it talks about "the fall" and "a horrible scream", not "die"), so the model honestly says "I don't know":
 
 ```bash
-node app.js "Who was Bahram, the son of Jezdegerd?"
+node app.js "How did Professor Moriarty die?"
 ```
 
 ```
-Question: Who was Bahram, the son of Jezdegerd?
-Settings: volume: all, k: 5, rerank: off
+Question: How did Professor Moriarty die?
+Settings: book: all, k: 5, rerank: off
 
-Based on the provided passages, Varanes, or Bahram, was the son of Jezdegerd who ascended the throne and imitated his father's intolerant zeal by continuing a cruel persecution [1]. Later, after his revolt, he is described by the son of Hormouz as an ungrateful slave, but he was truly descended from the ancient princes of Rei, which was one of the seven families possessing splendid and substantial prerogatives above the Persian nobility [2].
+I don't know - the retrieved passages do not answer this question.
 
 Sources:
-  [1] Volume 3, chunk 716 (similarity 0.614) - ... Jerusalem, in the sixty-seventh year of her age; protesting, with her dying breath, that she had never tra...
-  [2] Volume 4, chunk 1037 (similarity 0.608) - ... mountains of Hyrcania revealed the correspondence of the Turkish and Roman arms; and their union must have...
-  [3] Volume 5, chunk 1259 (similarity 0.533) - ... invested their slaves with the inheritance of kingdoms; and, in the Oriental style, a crowd of princes aro...
-  [4] Volume 6, chunk 597 (similarity 0.516) - ... of the mufti, who dared to reject his testimony in a civil cause: a mixture of servitude and freedom not u...
-  [5] Volume 5, chunk 243 (similarity 0.513) - ... was reduced to a narrow circle of existence, and deprived of those faithful mirrors, which reflect to our ...
+  [1] The Return of Sherlock Holmes, chunk 70 (similarity 0.657) - ... the line of his pedigree. The person becomes, as it were, the epitome of the history of his own family.” “...
+  [2] The Return of Sherlock Holmes, chunk 25 (similarity 0.645) - ... the puffs of his cigarette. “But the tracks!” I cried. “I saw, with my own eyes, that two went down the pa...
+  [3] The Memoirs of Sherlock Holmes, chunk 812 (similarity 0.638) - ... putting his finger-tips together and his elbows upon his knees, he explained the situation. “You have prob...
+  [4] The Memoirs of Sherlock Holmes, chunk 811 (similarity 0.636) - ... their highest tension. He saw the question in my eyes, and, putting his finger-tips together and his elbow...
+  [5] The Memoirs of Sherlock Holmes, chunk 850 (similarity 0.634) - ... spot. He said nothing, but he smiled at me with the air of a man who sees the fulfillment of that which he...
 ```
 
-With `--volume 3` only the right Bahram is left:
+With the book filter and re-rank the right passages come first:
 
 ```bash
-node app.js "Who was Bahram, the son of Jezdegerd?" --volume 3
+node app.js "How did Professor Moriarty die?" --book 6 --rerank
 ```
 
 ```
-Question: Who was Bahram, the son of Jezdegerd?
-Settings: volume: 3, k: 5, rerank: off
+Question: How did Professor Moriarty die?
+Settings: book: The Return of Sherlock Holmes, k: 5, rerank: on
 
-Bahram (also called Varanes) was the son of Jezdegerd [1]. He imitated the intolerant zeal of his father and soon ascended the Persian throne [1].
+Professor Moriarty died at the Reichenbach Fall [2][3]. He rushed at Sherlock Holmes and threw his long arms around him, and they tottered together upon the brink of the fall [3].
 
 Sources:
-  [1] Volume 3, chunk 716 (similarity 0.614) - ... Jerusalem, in the sixty-seventh year of her age; protesting, with her dying breath, that she had never tra...
-  [2] Volume 3, chunk 694 (similarity 0.493) - ... very copiously furnished with historical materials, it has not been possible to remark one action that pro...
-  [3] Volume 3, chunk 777 (similarity 0.44) - ... to the pious fraud and credulity of the modern Greeks, since the authentic tradition may be traced within ...
-  [4] Volume 3, chunk 218 (similarity 0.43) - ... of his son Abibas, his friend Nicodemus, and the illustrious Stephen, the first martyr of the Christian fa...
-  [5] Volume 3, chunk 1248 (similarity 0.429) - ... may be found in the situation of two princes, who conquered France by their valor, their policy, and the m...
+  [1] The Return of Sherlock Holmes, chunk 78 (similarity 0.589, rerank 5.073) - ... the death of the late lamented Professor Moriarty.” “I can hardly think that you would find many decent ci...
+  [2] The Return of Sherlock Holmes, chunk 25 (similarity 0.645, rerank 4.855) - ... the puffs of his cigarette. “But the tracks!” I cried. “I saw, with my own eyes, that two went down the pa...
+  [3] The Return of Sherlock Holmes, chunk 23 (similarity 0.606, rerank 2.25) - ... had no serious difficulty in getting out of it, for the very simple reason that I never was in it.” “You n...
+  [4] The Return of Sherlock Holmes, chunk 77 (similarity 0.471, rerank 1.864) - ... to devote his life to examining those interesting little problems which the complex life of London so plen...
+  [5] The Return of Sherlock Holmes, chunk 70 (similarity 0.657, rerank 1.117) - ... the line of his pedigree. The person becomes, as it were, the epitome of the history of his own family.” “...
 ```
 
-A question the book cannot answer:
+A question the books cannot answer:
 
 ```bash
 node app.js "Who won the 2018 football World Cup?"
@@ -117,14 +121,14 @@ node app.js "Who won the 2018 football World Cup?"
 
 ```
 Question: Who won the 2018 football World Cup?
-Settings: volume: all, k: 5, rerank: off
+Settings: book: all, k: 5, rerank: off
 
 I don't know - the retrieved passages do not answer this question.
 
 Sources:
-  [1] Volume 5, chunk 1346 (similarity 0.188) - ... institution, to refine the temper of Barbarians, and to infuse some principles of faith, justice, and huma...
-  [2] Volume 1, chunk 749 (similarity 0.15) - ... _truce of God_, so often and so ineffectually proclaimed by the clergy of the eleventh century, was an obv...
-  [3] Volume 3, chunk 1394 (similarity 0.149) - ... against the Tartar horse; and Europe is secure from any future irruptionsof Barbarians; since, before the...
-  [4] Volume 1, chunk 944 (similarity 0.147) - ... woods, suddenly attacked the legions in the dusk of the evening, and, it is most probable, after the fatig...
-  [5] Volume 1, chunk 937 (similarity 0.147) - ... the two horns of the crescent across the Danube, and wheeling them on a sudden towards the centre, enclose...
+  [1] The Return of Sherlock Holmes, chunk 834 (similarity 0.187) - ... Is there a telegram for me?” “Yes, I opened it. Here it is: “Ask for Pompey from Jeremy Dixon, Trinity Col...
+  [2] His Last Bow, chunk 521 (similarity 0.157) - ... Imperial Tokay. The thickset chauffeur, who had seated himself by the table, pushed forward his glass with...
+  [3] The Case-Book of Sherlock Holmes, chunk 642 (similarity 0.152) - ... give my husband his death-blow, and yet to leave the evidence that it was the lion which we would loose wh...
+  [4] The Return of Sherlock Holmes, chunk 835 (similarity 0.144) - ... evening paper has an excellent account in its last edition. Oxford won by a goal and two tries. The last s...
+  [5] The Return of Sherlock Holmes, chunk 8 (similarity 0.137) - ... way affect him. He had played nearly every day at one club or other, but he was a cautious player, and usu...
 ```

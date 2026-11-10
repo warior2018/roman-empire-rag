@@ -58,7 +58,7 @@ function showAnswer({ answer, sources }) {
     for (const s of sources) {
       const rerank = s.rerankScore === undefined ? "" : `, rerank ${s.rerankScore}`;
       const details = make("details");
-      details.append(make("summary", `[${s.n}] Volume ${s.volume}, chunk ${s.position} (similarity ${s.score}${rerank})`));
+      details.append(make("summary", `[${s.n}] ${s.title}, chunk ${s.position} (similarity ${s.score}${rerank})`));
       details.append(make("p", s.text));
       box.append(details);
     }
@@ -89,13 +89,13 @@ askForm.addEventListener("submit", async (event) => {
   const data = new FormData(askForm);
   const button = askForm.querySelector("button");
   button.disabled = true;
-  setStatus("ask-status", "Searching the book and asking the AI...");
+  setStatus("ask-status", "Searching the books and asking the AI...");
 
   try {
     showAnswer(
       await post("/api/ask", {
         question: data.get("question"),
-        volume: data.get("volume"),
+        book: data.get("book"),
         k: data.get("k"),
         rerank: data.get("rerank") === "on",
       })

@@ -1,7 +1,7 @@
 {
-  "name": "roman-empire-rag",
+  "name": "sherlock-holmes-rag",
   "version": "1.0.0",
-  "description": "RAG over Gibbon's Decline and Fall of the Roman Empire (CLI + web UI)",
+  "description": "RAG over the Sherlock Holmes stories by Arthur Conan Doyle (web UI + CLI)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

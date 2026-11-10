@@ -49,11 +49,11 @@ app.post("/api/ask", needIndex, async (req, res) => {
   const question = String(req.body?.question ?? "").trim();
   if (!question) return res.status(400).json({ error: "Please write a question" });
 
-  const volume = Number(req.body?.volume) || null;
+  const book = Number(req.body?.book) || null;
   const rerank = Boolean(req.body?.rerank);
 
   try {
-    res.json(await ask(question, { volume, k: readK(req.body), rerank }));
+    res.json(await ask(question, { book, k: readK(req.body), rerank }));
   } catch (err) {
     console.error(`Error: ${err.message}`);
     res.status(500).json({ error: err.message });
@@ -72,5 +72,5 @@ app.post("/api/eval", needIndex, async (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Roman Empire RAG is running: http://localhost:${PORT}`);
+  console.log(`Sherlock Holmes RAG is running: http://localhost:${PORT}`);
 });

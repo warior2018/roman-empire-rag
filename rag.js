@@ -37,14 +37,17 @@ const config = {
   rawDir: path.join(dataDir, "raw"),
   indexFile: path.join(dataDir, env.INDEX_NAME || "index.json"),
 
-  // Gibbon's 6 volumes on Project Gutenberg
-  volumes: [
-    { volume: 1, gutenbergId: 731 },
-    { volume: 2, gutenbergId: 732 },
-    { volume: 3, gutenbergId: 733 },
-    { volume: 4, gutenbergId: 734 },
-    { volume: 5, gutenbergId: 735 },
-    { volume: 6, gutenbergId: 736 },
+  // The 9 Sherlock Holmes books by Arthur Conan Doyle on Project Gutenberg
+  books: [
+    { book: 1, title: "A Study in Scarlet", gutenbergId: 244 },
+    { book: 2, title: "The Sign of the Four", gutenbergId: 2097 },
+    { book: 3, title: "The Adventures of Sherlock Holmes", gutenbergId: 1661 },
+    { book: 4, title: "The Memoirs of Sherlock Holmes", gutenbergId: 834 },
+    { book: 5, title: "The Hound of the Baskervilles", gutenbergId: 2852 },
+    { book: 6, title: "The Return of Sherlock Holmes", gutenbergId: 108 },
+    { book: 7, title: "The Valley of Fear", gutenbergId: 3289 },
+    { book: 8, title: "His Last Bow", gutenbergId: 2350 },
+    { book: 9, title: "The Case-Book of Sherlock Holmes", gutenbergId: 69700 },
   ],
 };
 
@@ -62,14 +65,14 @@ function stripGutenberg(text) {
   return clean.slice(from, to).trim();
 }
 
-// Download Gibbon's 6 volumes from Project Gutenberg (only the missing ones)
-async function downloadVolumes(onProgress) {
+// Download the books from Project Gutenberg (only the missing ones)
+async function downloadBooks(onProgress) {
   fs.mkdirSync(config.rawDir, { recursive: true });
-  for (const { volume, gutenbergId } of config.volumes) {
-    const file = path.join(config.rawDir, `volume-${volume}.txt`);
+  for (const { book, title, gutenbergId } of config.books) {
+    const file = path.join(config.rawDir, `book-${book}.txt`);
     if (fs.existsSync(file)) continue;
 
-    onProgress({ stage: `Downloading volume ${volume} of 6` });
+    onProgress({ stage: `Downloading book ${book} of ${config.books.length}: ${title}` });
     const url = `https://www.gutenberg.org/cache/epub/${gutenbergId}/pg${gutenbergId}.txt`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Download failed (${res.status}): ${url}`);
@@ -77,27 +80,24 @@ async function downloadVolumes(onProgress) {
   }
 }
 
-// Load all downloaded volumes
-function loadVolumes(config) {
-  return config.volumes.map(({ volume }) => {
-    const source = `volume-${volume}.txt`;
+// Load all downloaded books
+function loadBooks(config) {
+  return config.books.map(({ book, title }) => {
+    const source = `book-${book}.txt`;
     const file = path.join(config.rawDir, source);
     if (!fs.existsSync(file)) {
       throw new Error(`Missing ${file}`);
     }
-    return { volume, source, text: stripGutenberg(fs.readFileSync(file, "utf8")) };
+    return { book, title, source, text: stripGutenberg(fs.readFileSync(file, "utf8")) };
   });
 }
 
-// Footnotes in this edition look like: 39 (return) [ Dion, l. lxx. ]
-const FOOTNOTE = /^\d+ \(return\)/;
-
-// Split text into paragraphs (an empty line starts a new paragraph), skip footnotes
+// Split text into paragraphs (an empty line starts a new paragraph)
 function toParagraphs(text) {
   return text
     .split(/\n\s*\n/)
     .map((p) => p.replace(/\s+/g, " ").trim())
-    .filter((p) => p.length > 0 && !FOOTNOTE.test(p));
+    .filter((p) => p.length > 0);
 }
 
 // Cut a very long paragraph into groups of sentences
@@ -121,14 +121,14 @@ function splitLong(paragraph, maxWords) {
   return parts;
 }
 
-// Same text always gets the same id, so running ingest again creates no duplicates
-function makeId(volume, text) {
-  const hash = crypto.createHash("sha1").update(`${volume}\n${text}`).digest("hex").slice(0, 12);
-  return `vol${volume}-${hash}`;
+// Same text always gets the same id, so building the index again creates no duplicates
+function makeId(book, text) {
+  const hash = crypto.createHash("sha1").update(`${book}\n${text}`).digest("hex").slice(0, 12);
+  return `book${book}-${hash}`;
 }
 
 // Join paragraphs into chunks of about chunkWords words, with a small overlap
-function chunkVolume(doc, { chunkWords, overlapWords }) {
+function chunkBook(doc, { chunkWords, overlapWords }) {
   const pieces = toParagraphs(doc.text).flatMap((p) =>
     countWords(p) > chunkWords ? splitLong(p, chunkWords) : [p]
   );
@@ -157,9 +157,9 @@ function chunkVolume(doc, { chunkWords, overlapWords }) {
   if (hasNew) texts.push(current.join("\n\n"));
 
   return texts.map((text, i) => ({
-    id: makeId(doc.volume, text),
+    id: makeId(doc.book, text),
     text,
-    metadata: { volume: doc.volume, source: doc.source, position: i + 1 },
+    metadata: { book: doc.book, title: doc.title, source: doc.source, position: i + 1 },
   }));
 }
 
@@ -227,6 +227,7 @@ function saveIndex(index) {
 // Settings that change the vectors; if one changes, the index must be built again
 function indexSettings() {
   return {
+    books: config.books.map((b) => b.gutenbergId),
     embedModel: config.embedModel,
     embedPooling: config.embedPooling,
     chunkWords: config.chunkWords,
@@ -262,9 +263,9 @@ function cosine(a, b) {
 }
 
 // Find the k chunks most similar to the question vector
-function search(queryVector, { k, volume } = {}) {
+function search(queryVector, { k, book } = {}) {
   return getIndex()
-    .chunks.filter((chunk) => !volume || chunk.metadata.volume === volume)
+    .chunks.filter((chunk) => !book || chunk.metadata.book === book)
     .map((chunk) => ({ id: chunk.id, text: chunk.text, metadata: chunk.metadata, score: cosine(queryVector, chunk.vector) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, k);
@@ -340,11 +341,11 @@ async function chat(messages) {
 const NO_ANSWER = "I don't know - the retrieved passages do not answer this question.";
 
 // Step 1: find the best chunks for the question
-async function retrieve(question, { k = config.topK, volume = null, rerank = false } = {}) {
+async function retrieve(question, { k = config.topK, book = null, rerank = false } = {}) {
   const [queryVector] = await embed([question], { isQuery: true });
 
   // With re-ranking: take more candidates first, then keep the best k
-  const candidates = search(queryVector, { k: rerank ? Math.max(config.rerankCandidates, k) : k, volume });
+  const candidates = search(queryVector, { k: rerank ? Math.max(config.rerankCandidates, k) : k, book });
   if (!rerank || candidates.length === 0) return candidates;
 
   const scores = await rerankScores(question, candidates.map((c) => c.text));
@@ -356,17 +357,17 @@ async function retrieve(question, { k = config.topK, volume = null, rerank = fal
 
 // Step 2: build the prompt with rules, numbered passages and the question
 function buildMessages(question, chunks) {
-  const system = `You answer questions about Edward Gibbon's "The History of the Decline and Fall of the Roman Empire".
+  const system = `You answer questions about the Sherlock Holmes stories by Arthur Conan Doyle.
 Rules:
 - Use ONLY the numbered passages below. Do not add facts from your own knowledge.
-- Names can be spelled in different ways (for example "Varanes, or Bahram"); treat them as the same person.
+- People can be named in different ways (for example "Holmes" and "Sherlock Holmes"); treat them as the same person.
 - If the passages answer the question fully or in part, answer with what they say.
 - After each fact, cite the passage number, like [1] or [2][3].
 - Only if no passage is about the question, reply exactly: "${NO_ANSWER}"
 - Answer in clear modern English, in at most 150 words.`;
 
   const passages = chunks
-    .map((c, i) => `[${i + 1}] (Volume ${c.metadata.volume}, chunk ${c.metadata.position})\n${c.text}`)
+    .map((c, i) => `[${i + 1}] (${c.metadata.title}, chunk ${c.metadata.position})\n${c.text}`)
     .join("\n\n");
 
   return [
@@ -386,7 +387,8 @@ async function ask(question, options = {}) {
   const sources = chunks.map((c, i) => ({
     n: i + 1,
     id: c.id,
-    volume: c.metadata.volume,
+    book: c.metadata.book,
+    title: c.metadata.title,
     position: c.metadata.position,
     score: Number(c.score.toFixed(3)),
     rerankScore: c.rerankScore === undefined ? undefined : Number(c.rerankScore.toFixed(3)),
@@ -397,10 +399,10 @@ async function ask(question, options = {}) {
 
 // Build the index: download books -> cut into chunks -> make vectors -> save
 async function buildIndex(onProgress = () => {}) {
-  await downloadVolumes(onProgress);
+  await downloadBooks(onProgress);
 
   onProgress({ stage: "Cutting the book into chunks" });
-  const chunks = loadVolumes(config).flatMap((doc) => chunkVolume(doc, config));
+  const chunks = loadBooks(config).flatMap((doc) => chunkBook(doc, config));
   const unique = [...new Map(chunks.map((c) => [c.id, c])).values()];
 
   // Keep vectors we already have (same id = same text), so nothing is done twice

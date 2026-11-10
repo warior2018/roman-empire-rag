@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Roman Empire RAG</title>
+  <title>Sherlock Holmes RAG</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px 16px; background: #f6f5f1; color: #222; }
     h1 { margin: 0 0 4px; }
@@ -34,29 +34,32 @@
   </style>
 </head>
 <body>
-  <h1>Roman Empire RAG</h1>
-  <p class="sub">Ask about Gibbon's <i>History of the Decline and Fall of the Roman Empire</i>. Answers come only from the book.</p>
+  <h1>Sherlock Holmes RAG</h1>
+  <p class="sub">Ask about the Sherlock Holmes stories by Arthur Conan Doyle. Answers come only from the books.</p>
 
   <div id="preparing" class="box" hidden>
-    <h2>Preparing the book</h2>
+    <h2>Preparing the books</h2>
     <div id="stage">Starting...</div>
     <div class="progress"><div id="bar"></div></div>
   </div>
 
   <form id="ask">
     <label>Question
-      <textarea name="question" placeholder="Who was Bahram, the son of Jezdegerd?" required></textarea>
+      <textarea name="question" placeholder="Who is Irene Adler?" required></textarea>
     </label>
     <div class="row">
-      <label>Volume
-        <select name="volume">
-          <option value="">All volumes</option>
-          <option value="1">Volume 1</option>
-          <option value="2">Volume 2</option>
-          <option value="3">Volume 3</option>
-          <option value="4">Volume 4</option>
-          <option value="5">Volume 5</option>
-          <option value="6">Volume 6</option>
+      <label>Book
+        <select name="book">
+          <option value="">All books</option>
+          <option value="1">A Study in Scarlet</option>
+          <option value="2">The Sign of the Four</option>
+          <option value="3">The Adventures of Sherlock Holmes</option>
+          <option value="4">The Memoirs of Sherlock Holmes</option>
+          <option value="5">The Hound of the Baskervilles</option>
+          <option value="6">The Return of Sherlock Holmes</option>
+          <option value="7">The Valley of Fear</option>
+          <option value="8">His Last Bow</option>
+          <option value="9">The Case-Book of Sherlock Holmes</option>
         </select>
       </label>
       <label>Passages (k)
